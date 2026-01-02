@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, LogOut, Settings, User } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Settings, User, Banknote } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useBudgetStore } from '../../store/budgetStore'
 import { getMonthName } from '../../lib/utils'
@@ -40,12 +40,11 @@ export const Header: React.FC = () => {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
         {/* Left: App info */}
         <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-            <span className="text-white text-lg md:text-xl">💰</span>
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-sky-100 to-blue-100 flex items-center justify-center border border-sky-200/50">
+            <Banknote className="w-4 h-4 md:w-5 md:h-5 text-sky-600" />
           </div>
           <div className="hidden sm:block">
-            <p className="text-sm text-gray-500">Personal Finance Planner</p>
-            <p className="text-xs text-gray-400">Track your money wisely</p>
+            <p className="text-sm font-medium text-gray-700">Finance Planner</p>
           </div>
         </div>
 

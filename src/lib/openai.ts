@@ -50,7 +50,7 @@ export const generateFinancialInsights = async (
   }
 
   try {
-    const prompt = `Analyze this personal finance data and provide 3-5 actionable insights:
+    const prompt = `Analyze this finance data and provide 3-5 actionable insights:
 
 Monthly Overview:
 - Income: Planned ${overview.income.planned}, Actual ${overview.income.actual}
