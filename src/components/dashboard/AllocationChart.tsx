@@ -55,7 +55,6 @@ export const AllocationChart: React.FC = () => {
     cx, 
     cy, 
     midAngle, 
-    innerRadius, 
     outerRadius, 
     name,
     percentage 
@@ -63,7 +62,6 @@ export const AllocationChart: React.FC = () => {
     cx: number
     cy: number
     midAngle: number
-    innerRadius: number
     outerRadius: number
     name: string
     percentage: string | number

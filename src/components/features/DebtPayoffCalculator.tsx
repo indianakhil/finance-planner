@@ -67,7 +67,6 @@ export const DebtPayoffCalculator: React.FC = () => {
   }, [user?.id])
 
   const totalDebt = debts.reduce((sum, d) => sum + d.current_balance, 0)
-  const totalMinPayment = debts.reduce((sum, d) => sum + d.monthly_payment, 0)
 
   // Calculate payoff timeline
   const payoffData = useMemo(() => {

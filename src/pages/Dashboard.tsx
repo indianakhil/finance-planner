@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Layout } from '../components/layout/Layout'
 import { PremiumFeatures } from '../components/layout/PremiumFeatures'
 import { SummaryCards } from '../components/dashboard/SummaryCards'

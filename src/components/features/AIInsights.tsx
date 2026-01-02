@@ -5,7 +5,6 @@ import { Layout } from '../layout/Layout'
 import { Card, CardContent } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { useBudgetStore } from '../../store/budgetStore'
-import { useAuthStore } from '../../store/authStore'
 import { isOpenAIConfigured, generateFinancialInsights } from '../../lib/openai'
 import type { AIInsight } from '../../types'
 
@@ -67,7 +66,6 @@ const demoInsights: AIInsight[] = [
 
 export const AIInsights: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
   const { getOverview, entries } = useBudgetStore()
   const [insights, setInsights] = useState<AIInsight[]>([])
   const [isLoading, setIsLoading] = useState(false)
