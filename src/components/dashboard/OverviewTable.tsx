@@ -1,19 +1,45 @@
 import React from 'react'
-import { useBudgetStore } from '../../store/budgetStore'
+import { useTransactionStore } from '../../store/transactionStore'
+import { useCategoryBudgetStore } from '../../store/categoryBudgetStore'
 import { formatCurrency } from '../../lib/utils'
 
 export const OverviewTable: React.FC = () => {
-  const { getOverview } = useBudgetStore()
-  const overview = getOverview()
+  const { transactions } = useTransactionStore()
+  const { budgets } = useCategoryBudgetStore()
+  
+  const currentMonth = new Date().getMonth() + 1
+  const currentYear = new Date().getFullYear()
+
+  // Data is loaded by Dashboard, no need to reload here
+
+  // Calculate current month totals from transactions
+  const monthlyTransactions = transactions.filter((tx) => {
+    const txDate = new Date(tx.transaction_date)
+    return txDate.getMonth() + 1 === currentMonth && txDate.getFullYear() === currentYear
+  })
+
+  const totalIncome = monthlyTransactions
+    .filter((tx) => tx.type === 'income')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+
+  const totalExpenses = monthlyTransactions
+    .filter((tx) => tx.type === 'expense')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+
+  const totalTransfers = monthlyTransactions
+    .filter((tx) => tx.type === 'transfer')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+
+  // Total budgeted amount
+  const totalBudgeted = budgets.reduce((sum, b) => sum + b.budget_amount, 0)
+
+  const netBalance = totalIncome - totalExpenses
 
   const rows = [
-    { label: 'Income', planned: overview.income.planned, actual: overview.income.actual, sign: '+' },
-    { label: 'Expenses', planned: overview.expenses.planned, actual: overview.expenses.actual, sign: '-' },
-    { label: 'Bills', planned: overview.bills.planned, actual: overview.bills.actual, sign: '-' },
-    { label: 'Savings', planned: overview.savings.planned, actual: overview.savings.actual, sign: '-' },
-    { label: 'Debt', planned: overview.debt.planned, actual: overview.debt.actual, sign: '-' },
+    { label: 'Income', budgeted: '-', actual: totalIncome, sign: '+', color: 'text-green-600' },
+    { label: 'Expenses', budgeted: formatCurrency(totalBudgeted), actual: totalExpenses, sign: '-', color: 'text-red-600' },
+    { label: 'Transfers', budgeted: '-', actual: totalTransfers, sign: '↔', color: 'text-blue-600' },
   ]
-
 
   return (
     <div className="bg-white rounded-2xl shadow-card overflow-hidden h-full">
@@ -28,7 +54,7 @@ export const OverviewTable: React.FC = () => {
           <thead>
             <tr className="text-[11px] text-slate-400 uppercase tracking-wide">
               <th className="text-left py-1"></th>
-              <th className="text-right py-1 px-2 font-semibold">Planned</th>
+              <th className="text-right py-1 px-2 font-semibold">Budget</th>
               <th className="text-right py-1 font-semibold">Actual</th>
             </tr>
           </thead>
@@ -36,24 +62,22 @@ export const OverviewTable: React.FC = () => {
             {rows.map((row) => (
               <tr key={row.label}>
                 <td className="py-1.5 text-slate-600">
-                  <span className="text-slate-400 mr-1">{row.sign}</span>
+                  <span className={`mr-1 ${row.color}`}>{row.sign}</span>
                   {row.label}
                 </td>
-                <td className="py-1.5 px-2 text-right text-slate-700">
-                  {formatCurrency(row.planned)}
+                <td className="py-1.5 px-2 text-right text-slate-500">
+                  {row.budgeted}
                 </td>
-                <td className="py-1.5 text-right text-slate-700">
+                <td className={`py-1.5 text-right font-medium ${row.color}`}>
                   {formatCurrency(row.actual)}
                 </td>
               </tr>
             ))}
             <tr className="border-t border-slate-100">
-              <td className="py-1.5 font-bold text-slate-700 uppercase text-[11px] tracking-wide">Remaining</td>
-              <td className="py-1.5 px-2 text-right font-bold text-slate-800">
-                {formatCurrency(overview.remaining.planned)}
-              </td>
-              <td className="py-1.5 text-right font-bold text-slate-800">
-                {formatCurrency(overview.remaining.actual)}
+              <td className="py-1.5 font-bold text-slate-700 uppercase text-[11px] tracking-wide">Net</td>
+              <td className="py-1.5 px-2 text-right text-slate-400">-</td>
+              <td className={`py-1.5 text-right font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(netBalance)}
               </td>
             </tr>
           </tbody>
@@ -62,4 +86,3 @@ export const OverviewTable: React.FC = () => {
     </div>
   )
 }
-

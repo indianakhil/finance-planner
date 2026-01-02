@@ -37,7 +37,7 @@ export const Input: React.FC<InputProps> = ({
         <input
           id={inputId}
           className={`
-            w-full px-4 py-2 border rounded-lg
+            w-full px-4 py-2.5 md:py-2 border rounded-lg text-base md:text-sm
             focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
             transition-all duration-200
             ${leftIcon ? 'pl-10' : ''}

@@ -1,88 +1,80 @@
-import React from 'react'
+import React, { useMemo, memo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
-import { useBudgetStore } from '../../store/budgetStore'
+import { useTransactionStore } from '../../store/transactionStore'
+import { useHierarchicalCategoryStore } from '../../store/hierarchicalCategoryStore'
 import { formatCurrency } from '../../lib/utils'
-import type { Category } from '../../types'
 
-const COLORS: Record<Category, string> = {
-  expenses: '#3B82F6',
-  bills: '#6366F1',
-  savings: '#10B981',
-  debt: '#EC4899',
-  income: '#22C55E',
-}
+const DEFAULT_COLORS = [
+  '#3B82F6', '#10B981', '#F97316', '#8B5CF6', '#EC4899',
+  '#06B6D4', '#F59E0B', '#6366F1', '#14B8A6', '#EF4444',
+]
 
-export const AllocationChart: React.FC = () => {
-  const { getOverview } = useBudgetStore()
-  const overview = getOverview()
+export const AllocationChart: React.FC = memo(() => {
+  const { transactions } = useTransactionStore()
+  const { categories, getParentCategories } = useHierarchicalCategoryStore()
+  
+  const currentMonth = new Date().getMonth() + 1
+  const currentYear = new Date().getFullYear()
 
-  const total = 
-    overview.expenses.actual + 
-    overview.bills.actual + 
-    overview.savings.actual + 
-    overview.debt.actual
+  // Data is loaded by Dashboard, no need to reload here
 
-  const data = [
-    { 
-      name: 'Expenses', 
-      value: overview.expenses.actual, 
-      color: COLORS.expenses,
-      percentage: total > 0 ? ((overview.expenses.actual / total) * 100).toFixed(1) : 0
-    },
-    { 
-      name: 'Bills', 
-      value: overview.bills.actual, 
-      color: COLORS.bills,
-      percentage: total > 0 ? ((overview.bills.actual / total) * 100).toFixed(1) : 0
-    },
-    { 
-      name: 'Savings', 
-      value: overview.savings.actual, 
-      color: COLORS.savings,
-      percentage: total > 0 ? ((overview.savings.actual / total) * 100).toFixed(1) : 0
-    },
-    { 
-      name: 'Debt', 
-      value: overview.debt.actual, 
-      color: COLORS.debt,
-      percentage: total > 0 ? ((overview.debt.actual / total) * 100).toFixed(1) : 0
-    },
-  ].filter(item => item.value > 0)
+  // Calculate spending by category
+  const data = useMemo(() => {
+    const parentCategories = getParentCategories()
+    const monthlyExpenses = transactions.filter((tx) => {
+      if (tx.type !== 'expense') return false
+      const txDate = new Date(tx.transaction_date)
+      return txDate.getMonth() + 1 === currentMonth && txDate.getFullYear() === currentYear
+    })
+
+    const total = monthlyExpenses.reduce((sum, tx) => sum + tx.amount, 0)
+
+    // Calculate spending per parent category
+    const categoryData = parentCategories.map((cat, index) => {
+      const subcategoryIds = categories
+        .filter((c) => c.parent_id === cat.id)
+        .map((c) => c.id)
+      
+      const spent = monthlyExpenses
+        .filter((tx) => {
+          const catId = tx.new_category_id || tx.category_id
+          return catId === cat.id || subcategoryIds.includes(catId || '')
+        })
+        .reduce((sum, tx) => sum + tx.amount, 0)
+
+      return {
+        name: cat.name.length > 12 ? cat.name.substring(0, 12) + '…' : cat.name,
+        fullName: cat.name,
+        value: spent,
+        color: cat.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length],
+        percentage: total > 0 ? ((spent / total) * 100).toFixed(1) : '0',
+        icon: cat.icon,
+      }
+    })
+    .filter((c) => c.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6)
+
+    return categoryData
+  }, [transactions, categories, currentMonth, currentYear])
 
   const hasData = data.length > 0
 
-  const renderCustomLabel = ({ 
-    cx, 
-    cy, 
-    midAngle, 
-    outerRadius, 
-    name,
-    percentage 
-  }: {
-    cx: number
-    cy: number
-    midAngle: number
-    outerRadius: number
-    name: string
-    percentage: string | number
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload }: { 
+    active?: boolean
+    payload?: Array<{ payload: { fullName: string; value: number; percentage: string; icon: string } }>
   }) => {
-    const RADIAN = Math.PI / 180
-    const radius = outerRadius + 25
-    const x = cx + radius * Math.cos(-midAngle * RADIAN)
-    const y = cy + radius * Math.sin(-midAngle * RADIAN)
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="#374151"
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        className="text-xs"
-      >
-        {name} ({percentage}%)
-      </text>
-    )
+    if (active && payload && payload.length) {
+      const item = payload[0].payload
+      return (
+        <div className="bg-white px-2 py-1.5 rounded shadow-md border border-gray-100">
+          <p className="text-xs font-medium text-gray-700">{item.icon} {item.fullName}</p>
+          <p className="text-xs text-gray-500">{formatCurrency(item.value)} ({item.percentage}%)</p>
+        </div>
+      )
+    }
+    return null
   }
 
   return (
@@ -95,43 +87,48 @@ export const AllocationChart: React.FC = () => {
 
       <div className="p-3">
         {hasData ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={renderCustomLabel}
-                outerRadius={60}
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value: number, name: string) => [
-                  formatCurrency(value),
-                  name
-                ]}
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="flex flex-col items-center">
+            <ResponsiveContainer width="100%" height={140}>
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={55}
+                  dataKey="value"
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            {/* Legend below chart */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2">
+              {data.map((item) => (
+                <div key={item.name} className="flex items-center gap-1.5">
+                  <div 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-[10px] text-slate-600">
+                    {item.icon} {item.name} {item.percentage}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
           // Clean empty state
-          <div className="h-[200px] flex items-center justify-center">
-            <p className="text-slate-300 text-sm">No data to display</p>
+          <div className="h-[180px] flex items-center justify-center">
+            <p className="text-slate-300 text-sm">No spending data</p>
           </div>
         )}
       </div>
     </div>
   )
-}
+})
 
+AllocationChart.displayName = 'AllocationChart'

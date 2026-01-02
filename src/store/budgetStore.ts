@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import type { Budget, Entry, Category, MonthlyOverview, CategorySummary } from '../types'
+import type { Budget, Entry, LegacyCategory, MonthlyOverview, CategorySummary } from '../types'
 import { generateId, getCurrentMonthYear } from '../lib/utils'
 
 interface BudgetState {
@@ -21,8 +21,8 @@ interface BudgetState {
   deleteEntry: (id: string) => Promise<boolean>
   restoreEntry: (entry: Entry) => Promise<boolean>
   getOverview: () => MonthlyOverview
-  getCategorySummary: (category: Category) => CategorySummary
-  getEntriesByCategory: (category: Category) => Entry[]
+  getCategorySummary: (category: LegacyCategory) => CategorySummary
+  getEntriesByCategory: (category: LegacyCategory) => Entry[]
   fetchPreviousMonthRemaining: (userId: string, month: number, year: number) => Promise<number | null>
 }
 
@@ -261,7 +261,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => {
     getOverview: () => {
       const { entries } = get()
       
-      const sumByCategory = (category: Category): CategorySummary => {
+      const sumByCategory = (category: LegacyCategory): CategorySummary => {
         const categoryEntries = entries.filter(e => e.category === category)
         const planned = categoryEntries.reduce((sum, e) => sum + e.planned, 0)
         const actual = categoryEntries.reduce((sum, e) => sum + e.actual, 0)
@@ -295,7 +295,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => {
       }
     },
 
-    getCategorySummary: (category: Category) => {
+    getCategorySummary: (category: LegacyCategory) => {
       const { entries } = get()
       const categoryEntries = entries.filter(e => e.category === category)
       const planned = categoryEntries.reduce((sum, e) => sum + e.planned, 0)
@@ -308,7 +308,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => {
       }
     },
 
-    getEntriesByCategory: (category: Category) => {
+    getEntriesByCategory: (category: LegacyCategory) => {
       return get().entries.filter(e => e.category === category)
     },
 

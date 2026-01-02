@@ -1,22 +1,52 @@
 # FinancePlanner
 
-A beautiful, full-featured personal finance dashboard built with React, TypeScript, and Supabase.
+A beautiful, full-featured personal finance dashboard built with React, TypeScript, and Supabase. Inspired by Wallet by BudgetBakers.
 
 ## Features
 
 ### Core Dashboard
-- **Budget Tracking**: Track income, expenses, bills, savings, and debt
-- **Interactive Charts**: Donut, bar, and pie charts with hover tooltips
-- **Category Tables**: Editable entries with add/edit/delete functionality
-- **Undo Support**: Timed undo toast for accidental deletions
-- **Month Navigation**: Browse through budget history
+- **Income Tracking**: Track all income sources with quick entry
+- **Expense Tracking**: Log expenses with categories and payment methods
+- **Upcoming Payments**: View scheduled transactions for the next 30 days
+- **Interactive Charts**: Spending by category, allocation breakdown, cash flow
+- **Summary Cards**: At-a-glance view of income, expenses, and balance
 
-### Premium Features (All data saved to database)
+### Accounts System
+- **Multiple Account Types**: General, Cash, Current Account, Credit Card, Savings, Bonus, Insurance, Investment, Loan, Mortgage, Overdraft
+- **Automatic Balance Updates**: Account balances update in real-time as transactions are added
+- **Credit Card/Overdraft Support**: Track available credit and credit balance with special display modes
+- **Dashboard Balance Row**: Quick view of all account balances on the main dashboard
+
+### Transactions
+- **Three Transaction Types**: Income, Expense, Transfer
+- **Payment Methods**: Cash, Debit Card, Credit Card, Bank Transfer, Mobile Payment (UPI), Web Payment, Voucher
+- **Status Tracking**: Reconciled, Cleared, Uncleared with smart defaults based on account type
+- **Comprehensive Filters**: Filter by type, account, category, status, date range, and search text
+
+### Hierarchical Categories
+- **User-Defined Categories**: Create custom categories with icons and colors
+- **Subcategories**: Organize with parent-child category relationships
+- **Category Manager**: Visual tree editor for organizing your category hierarchy
+
+### Budget Tracker
+- **Category-wise Budgets**: Set monthly budgets for each category
+- **Drill-Down Charts**: Click on chart segments to view subcategory breakdown
+- **Spending vs Budget**: Visual progress bars showing budget consumption
+- **Monthly Navigation**: Browse budgets and spending across months
+
+### Planned Payments (Scheduled Transactions)
+- **One-Time Payments**: Schedule payments for a specific future date
+- **Recurring Payments**: Set up daily, weekly, monthly, or yearly recurring transactions
+  - Weekly: Select specific weekdays
+  - Monthly: Every N months
+- **Auto-Execution**: Scheduled payments automatically create transactions when due
+- **Payment Methods**: All standard payment methods supported
+
+### Additional Features
 - **Net Worth Tracker**: Track assets and liabilities over time with historical charts
-- **Financial Calendar**: View bills and due dates in calendar format (uses Bills Tracker data)
-- **Annual Dashboard**: Year-over-year insights from your actual budget data
+- **Financial Calendar**: View bills and due dates in calendar format
+- **Annual Dashboard**: Year-over-year insights from your actual data
 - **Debt Payoff Calculator**: Avalanche and Snowball strategies with timeline projections
-- **Recurring Bills Manager**: Manage recurring expenses with categories and frequencies
 - **Budget Templates**: Pre-built allocation templates (50/30/20, Aggressive Saver, etc.)
 - **AI Insights**: OpenAI-powered financial recommendations (optional)
 - **Data Export**: Download as CSV or PDF
@@ -117,21 +147,28 @@ Once the project is ready:
 
 1. In the left sidebar, click **"SQL Editor"**
 2. Click **"New query"** (or the + button)
-3. Open the file `supabase/migrations/001_initial_schema.sql` from this project
+3. Open the file `supabase/migrations/001_complete_schema.sql` from this project
 4. **Copy the entire contents** of that file
 5. **Paste it** into the SQL Editor
 6. Click **"Run"** (or press Cmd/Ctrl + Enter)
 7. You should see: `Success. No rows returned`
 
-This creates all the necessary tables:
+This single migration creates all the necessary tables:
 - `users` - User profiles and settings
-- `budgets` - Monthly budgets
-- `entries` - Budget line items (income, expenses, etc.)
+- `users` - User profiles and settings
+- `accounts` - Financial accounts (bank, credit card, cash, etc.)
+- `categories` - Hierarchical user-defined categories with subcategories
+- `category_budgets` - Monthly budget amounts per category
+- `planned_payments` - Scheduled one-time and recurring transactions
+- `transactions` - All income, expense, and transfer records
+- `custom_dashboard_tiles` - User-defined dashboard summary cards
 - `net_worth_records` - Net worth history (for Net Worth Tracker)
-- `recurring_bills` - Recurring expenses (for Bills Tracker & Calendar)
+- `recurring_bills` - Legacy recurring expenses (for Bills Tracker & Calendar)
 - `debt_accounts` - Debt tracking (for Debt Payoff Calculator)
+- `budgets` & `entries` - Legacy budget system (for backward compatibility)
+- `user_categories` - Legacy categories (for backward compatibility)
 
-**Important**: All Premium Features require these tables. Make sure the SQL migration runs successfully.
+**Important**: All features require these tables. Make sure the migration runs successfully.
 
 ### 2.5 Enable Email Authentication
 
@@ -374,16 +411,23 @@ FinancePlanner/
 │   ├── components/     # React components
 │   │   ├── auth/       # Login, Register, Google button
 │   │   ├── dashboard/  # Charts and tables
-│   │   ├── features/   # Net Worth, Calendar, etc.
+│   │   ├── features/   # Net Worth, Calendar, Accounts, Transactions, etc.
 │   │   ├── layout/     # Header, Layout
 │   │   └── ui/         # Button, Input, Modal, etc.
 │   ├── hooks/          # useAuth, useBudget, useToast
 │   ├── lib/            # supabase.ts, openai.ts, utils.ts
 │   ├── pages/          # Dashboard, Login, Settings, etc.
 │   ├── store/          # Zustand state management
+│   │   ├── authStore.ts
+│   │   ├── budgetStore.ts
+│   │   ├── accountStore.ts    # NEW: Account management
+│   │   ├── categoryStore.ts   # NEW: Custom categories
+│   │   ├── transactionStore.ts # NEW: Transaction management
+│   │   └── toastStore.ts
 │   └── types/          # TypeScript interfaces
 ├── supabase/
-│   └── migrations/     # Database schema
+│   └── migrations/
+│       └── 001_complete_schema.sql  # Complete database schema (run this single file)
 ├── public/             # Static assets
 ├── .env                # Your environment variables (don't commit!)
 └── package.json        # Dependencies
@@ -408,6 +452,9 @@ FinancePlanner/
 | Feature | Database Table | What it stores |
 |---------|---------------|----------------|
 | Main Budget | `budgets`, `entries` | Monthly budget data and line items |
+| Accounts | `accounts` | Bank accounts, credit cards, cash, investments, loans, etc. |
+| Transactions | `transactions` | Income, expenses, and transfers with full details |
+| Categories | `user_categories` | Custom categories mapped to 5 main budget categories |
 | Net Worth Tracker | `net_worth_records` | Assets, liabilities, and record dates |
 | Bills Tracker | `recurring_bills` | Recurring bills with due dates and frequencies |
 | Financial Calendar | `recurring_bills` | Uses Bills Tracker data to show due dates |

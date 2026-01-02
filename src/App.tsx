@@ -18,6 +18,11 @@ import { DebtPayoffCalculator } from './components/features/DebtPayoffCalculator
 import { RecurringBillsManager } from './components/features/RecurringBillsManager'
 import { BudgetTemplates } from './components/features/BudgetTemplates'
 import { AIInsights } from './components/features/AIInsights'
+import { AccountsManager } from './components/features/AccountsManager'
+import { TransactionsManager } from './components/features/TransactionsManager'
+import { BudgetTracker } from './components/features/BudgetTracker'
+import { PlannedPaymentsManager } from './components/features/PlannedPaymentsManager'
+import { CategoryManager } from './components/features/CategoryManager'
 
 // Components
 import { AuthGuard } from './components/auth/AuthGuard'
@@ -113,6 +118,46 @@ const App: React.FC = () => {
           element={
             <AuthGuard>
               <AIInsights />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <AuthGuard>
+              <AccountsManager />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            <AuthGuard>
+              <TransactionsManager />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/budget-tracker"
+          element={
+            <AuthGuard>
+              <BudgetTracker />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/planned-payments"
+          element={
+            <AuthGuard>
+              <PlannedPaymentsManager />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/categories"
+          element={
+            <AuthGuard>
+              <CategoryManager />
             </AuthGuard>
           }
         />

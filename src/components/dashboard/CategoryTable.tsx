@@ -3,10 +3,10 @@ import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { useBudgetStore } from '../../store/budgetStore'
 import { useToast } from '../../hooks/useToast'
 import { calculatePercentage, getCategoryGradient, getCategoryLabel, formatCurrency } from '../../lib/utils'
-import type { Category, Entry } from '../../types'
+import type { LegacyCategory, Entry } from '../../types'
 
 interface CategoryTableProps {
-  category: Category
+  category: LegacyCategory
 }
 
 export const CategoryTable: React.FC<CategoryTableProps> = ({ category }) => {
@@ -119,38 +119,56 @@ export const CategoryTable: React.FC<CategoryTableProps> = ({ category }) => {
                 {editingId === entry.id ? (
                   // Editing mode
                   <>
-                    <td className="py-1.5 px-2">
+                    <td className="py-1.5 px-1">
                       <input
                         type="text"
                         value={editValues.name || ''}
                         onChange={(e) => setEditValues({ ...editValues, name: e.target.value })}
-                        className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:border-blue-400"
+                        className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs focus:outline-none focus:border-blue-400"
                         autoFocus
                       />
                     </td>
-                    <td className="py-1.5 px-2">
-                      <input
-                        type="number"
-                        value={editValues.planned || 0}
-                        onChange={(e) => setEditValues({ ...editValues, planned: Number(e.target.value) })}
-                        className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-center focus:outline-none focus:border-blue-400"
-                      />
+                    <td className="py-1.5 px-1">
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">₹</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editValues.planned || ''}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '')
+                            setEditValues({ ...editValues, planned: Number(val) || 0 })
+                          }}
+                          placeholder="0"
+                          className="w-full pl-5 pr-2 py-1.5 border border-slate-200 rounded text-xs text-right focus:outline-none focus:border-blue-400"
+                        />
+                      </div>
                     </td>
-                    <td className="py-1.5 px-2">
-                      <input
-                        type="number"
-                        value={editValues.actual || 0}
-                        onChange={(e) => setEditValues({ ...editValues, actual: Number(e.target.value) })}
-                        className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-center focus:outline-none focus:border-blue-400"
-                      />
+                    <td className="py-1.5 px-1">
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">₹</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={editValues.actual || ''}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '')
+                            setEditValues({ ...editValues, actual: Number(val) || 0 })
+                          }}
+                          placeholder="0"
+                          className="w-full pl-5 pr-2 py-1.5 border border-slate-200 rounded text-xs text-right focus:outline-none focus:border-blue-400"
+                        />
+                      </div>
                     </td>
-                    <td className="py-1.5 px-2">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <button onClick={handleSaveEdit} className="p-0.5 text-emerald-600 hover:text-emerald-700">
-                          <Check className="w-3.5 h-3.5" />
+                    <td className="py-1.5 px-1">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={handleSaveEdit} className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded">
+                          <Check className="w-4 h-4" />
                         </button>
-                        <button onClick={handleCancelEdit} className="p-0.5 text-slate-400 hover:text-slate-600">
-                          <X className="w-3.5 h-3.5" />
+                        <button onClick={handleCancelEdit} className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded">
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -188,44 +206,60 @@ export const CategoryTable: React.FC<CategoryTableProps> = ({ category }) => {
             {/* Add new entry row */}
             {isAdding && (
               <tr className="border-b border-slate-100">
-                <td className="py-1.5 px-2">
+                <td className="py-1.5 px-1">
                   <input
                     type="text"
                     value={newEntry.name}
                     onChange={(e) => setNewEntry({ ...newEntry, name: e.target.value })}
-                    placeholder="Entr"
-                    className="w-full px-2 py-1 border border-slate-200 rounded text-xs bg-white focus:outline-none focus:border-blue-400"
+                    placeholder="Entry name"
+                    className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-white focus:outline-none focus:border-blue-400"
                     autoFocus
                   />
                 </td>
-                <td className="py-1.5 px-2">
-                  <input
-                    type="number"
-                    value={newEntry.planned || ''}
-                    onChange={(e) => setNewEntry({ ...newEntry, planned: Number(e.target.value) })}
-                    placeholder="0"
-                    className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-center bg-white focus:outline-none focus:border-blue-400"
-                  />
+                <td className="py-1.5 px-1">
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">₹</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={newEntry.planned || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '')
+                        setNewEntry({ ...newEntry, planned: Number(val) })
+                      }}
+                      placeholder="0"
+                      className="w-full pl-5 pr-2 py-1.5 border border-slate-200 rounded text-xs text-right bg-white focus:outline-none focus:border-blue-400"
+                    />
+                  </div>
                 </td>
-                <td className="py-1.5 px-2">
-                  <input
-                    type="number"
-                    value={newEntry.actual || ''}
-                    onChange={(e) => setNewEntry({ ...newEntry, actual: Number(e.target.value) })}
-                    placeholder="0"
-                    className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-center bg-white focus:outline-none focus:border-blue-400"
-                  />
+                <td className="py-1.5 px-1">
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">₹</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={newEntry.actual || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '')
+                        setNewEntry({ ...newEntry, actual: Number(val) })
+                      }}
+                      placeholder="0"
+                      className="w-full pl-5 pr-2 py-1.5 border border-slate-200 rounded text-xs text-right bg-white focus:outline-none focus:border-blue-400"
+                    />
+                  </div>
                 </td>
-                <td className="py-1.5 px-2">
-                  <div className="flex items-center justify-end gap-0.5">
-                    <button onClick={handleAddEntry} className="p-0.5 text-emerald-600 hover:text-emerald-700">
-                      <Check className="w-3.5 h-3.5" />
+                <td className="py-1.5 px-1">
+                  <div className="flex items-center justify-end gap-1">
+                    <button onClick={handleAddEntry} className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded">
+                      <Check className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => { setIsAdding(false); setNewEntry({ name: '', planned: 0, actual: 0 }) }}
-                      className="p-0.5 text-slate-400 hover:text-slate-600"
+                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 </td>

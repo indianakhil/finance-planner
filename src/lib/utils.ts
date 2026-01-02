@@ -1,4 +1,4 @@
-import { Category } from '../types'
+import { LegacyCategory } from '../types'
 
 export const formatCurrency = (amount: number, currency = '₹'): string => {
   const absAmount = Math.abs(amount)
@@ -36,8 +36,8 @@ export const getPercentageClass = (percentage: number): string => {
   return 'percentage-danger'
 }
 
-export const getCategoryColor = (category: Category): string => {
-  const colors: Record<Category, string> = {
+export const getCategoryColor = (category: LegacyCategory): string => {
+  const colors: Record<LegacyCategory, string> = {
     income: '#22C55E',
     expenses: '#3B82F6',
     bills: '#6366F1',
@@ -47,8 +47,8 @@ export const getCategoryColor = (category: Category): string => {
   return colors[category]
 }
 
-export const getCategoryGradient = (category: Category): string => {
-  const gradients: Record<Category, string> = {
+export const getCategoryGradient = (category: LegacyCategory): string => {
+  const gradients: Record<LegacyCategory, string> = {
     income: 'bg-income',
     expenses: 'bg-expenses',
     bills: 'bg-bills',
@@ -58,8 +58,8 @@ export const getCategoryGradient = (category: Category): string => {
   return gradients[category]
 }
 
-export const getCategoryLabel = (category: Category): string => {
-  const labels: Record<Category, string> = {
+export const getCategoryLabel = (category: LegacyCategory): string => {
+  const labels: Record<LegacyCategory, string> = {
     income: 'Income',
     expenses: 'Expenses',
     bills: 'Bills',

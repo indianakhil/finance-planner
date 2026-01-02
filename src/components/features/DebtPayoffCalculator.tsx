@@ -362,8 +362,9 @@ export const DebtPayoffCalculator: React.FC = () => {
                 <h3 className="font-semibold text-gray-800 mb-4">Extra Monthly Payment</h3>
                 <Input
                   type="number"
-                  value={extraPayment}
-                  onChange={(e) => setExtraPayment(Number(e.target.value))}
+                  value={extraPayment || ''}
+                  onChange={(e) => setExtraPayment(Number(e.target.value) || 0)}
+                  placeholder="0"
                   leftIcon={<span className="text-gray-500">₹</span>}
                 />
                 <p className="text-xs text-gray-500 mt-2">
