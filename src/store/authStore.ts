@@ -30,12 +30,12 @@ const demoUser: User = {
   created_at: new Date().toISOString(),
 }
 
-// Helper to add timeout to promises
-const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+// Helper to add timeout to promises (works with both Promise and PromiseLike/thenable)
+const withTimeout = <T>(promise: PromiseLike<T>, ms: number): Promise<T> => {
   const timeout = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error('Request timed out')), ms)
   })
-  return Promise.race([promise, timeout])
+  return Promise.race([Promise.resolve(promise), timeout])
 }
 
 export const useAuthStore = create<AuthState>()(

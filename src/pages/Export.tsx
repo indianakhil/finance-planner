@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react'
+import { ArrowLeft, Download, FileText, FileSpreadsheet } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { Layout } from '../components/layout/Layout'
