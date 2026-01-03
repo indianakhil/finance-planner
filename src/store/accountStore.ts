@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { generateId } from '../lib/utils'
 import { logger } from '../lib/logger'
+import { getUserFriendlyError } from '../lib/errorMessages'
 import type { Account, AccountType } from '../types'
 
 interface AccountState {
@@ -50,10 +51,10 @@ export const useAccountStore = create<AccountState>((set, get) => ({
 
       set({ accounts: data || [], isLoading: false })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load accounts'
-      logger.error('Error loading accounts', error instanceof Error ? error : new Error(errorMessage), { userId })
+      const userFriendlyError = getUserFriendlyError(error, 'loadAccounts')
+      logger.error('Error loading accounts', error instanceof Error ? error : new Error('Unknown error'), { userId })
       set({ 
-        error: errorMessage,
+        error: userFriendlyError,
         isLoading: false 
       })
     }
@@ -65,31 +66,44 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       const newAccount: Account = {
         ...accountData,
         id: generateId(),
-        current_balance: accountData.initial_balance,
+        current_balance: accountData.initial_balance || 0,
         created_at: new Date().toISOString(),
       }
       set((state) => ({ accounts: [newAccount, ...state.accounts] }))
       return newAccount
     }
 
+    // Clear any previous errors
+    set({ error: null })
+
     try {
+      // Ensure required fields have defaults
+      const accountPayload = {
+        ...accountData,
+        initial_balance: accountData.initial_balance || 0,
+        current_balance: accountData.initial_balance || 0,
+        credit_limit: accountData.credit_limit || null,
+        balance_display: accountData.balance_display || null,
+        payment_due_day: accountData.payment_due_day || null,
+        account_number: accountData.account_number || null,
+      }
+
       const { data, error } = await supabase
         .from('accounts')
-        .insert({
-          ...accountData,
-          current_balance: accountData.initial_balance,
-        })
+        .insert(accountPayload)
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
 
-      set((state) => ({ accounts: [data, ...state.accounts] }))
+      set((state) => ({ accounts: [data, ...state.accounts], error: null }))
       return data
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to add account'
-      logger.error('Error adding account', error instanceof Error ? error : new Error(errorMessage), { accountData })
-      set({ error: errorMessage })
+      const userFriendlyError = getUserFriendlyError(error, 'addAccount')
+      logger.error('Error adding account', error instanceof Error ? error : new Error('Unknown error'), { accountData })
+      set({ error: userFriendlyError })
       return null
     }
   },
@@ -120,9 +134,9 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       }))
       return true
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update account'
-      logger.error('Error updating account', error instanceof Error ? error : new Error(errorMessage), { id, updates })
-      set({ error: errorMessage })
+      const userFriendlyError = getUserFriendlyError(error, 'updateAccount')
+      logger.error('Error updating account', error instanceof Error ? error : new Error('Unknown error'), { id, updates })
+      set({ error: userFriendlyError })
       return false
     }
   },
@@ -149,9 +163,9 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       }))
       return true
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete account'
-      logger.error('Error deleting account', error instanceof Error ? error : new Error(errorMessage), { id })
-      set({ error: errorMessage })
+      const userFriendlyError = getUserFriendlyError(error, 'deleteAccount')
+      logger.error('Error deleting account', error instanceof Error ? error : new Error('Unknown error'), { id })
+      set({ error: userFriendlyError })
       return false
     }
   },

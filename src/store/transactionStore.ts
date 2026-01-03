@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { generateId } from '../lib/utils'
 import { logger } from '../lib/logger'
+import { getUserFriendlyError } from '../lib/errorMessages'
 import type { Transaction, TransactionType } from '../types'
 
 interface TransactionFilters {
@@ -87,10 +88,10 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
       set({ transactions: data || [], isLoading: false, filters: filters || {} })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load transactions'
-      logger.error('Error loading transactions', error instanceof Error ? error : new Error(errorMessage), { userId })
+      const userFriendlyError = getUserFriendlyError(error, 'loadTransactions')
+      logger.error('Error loading transactions', error instanceof Error ? error : new Error('Unknown error'), { userId })
       set({ 
-        error: errorMessage,
+        error: userFriendlyError,
         isLoading: false 
       })
     }
@@ -120,9 +121,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       set((state) => ({ transactions: [data, ...state.transactions] }))
       return data
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to add transaction'
-      logger.error('Error adding transaction', error instanceof Error ? error : new Error(errorMessage), { transactionData })
-      set({ error: errorMessage })
+      const userFriendlyError = getUserFriendlyError(error, 'addTransaction')
+      logger.error('Error adding transaction', error instanceof Error ? error : new Error('Unknown error'), { transactionData })
+      set({ error: userFriendlyError })
       return null
     }
   },
@@ -153,9 +154,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       }))
       return true
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update transaction'
-      logger.error('Error updating transaction', error instanceof Error ? error : new Error(errorMessage), { id, updates })
-      set({ error: errorMessage })
+      const userFriendlyError = getUserFriendlyError(error, 'updateTransaction')
+      logger.error('Error updating transaction', error instanceof Error ? error : new Error('Unknown error'), { id, updates })
+      set({ error: userFriendlyError })
       return false
     }
   },
@@ -182,9 +183,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       }))
       return true
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete transaction'
-      logger.error('Error deleting transaction', error instanceof Error ? error : new Error(errorMessage), { id })
-      set({ error: errorMessage })
+      const userFriendlyError = getUserFriendlyError(error, 'deleteTransaction')
+      logger.error('Error deleting transaction', error instanceof Error ? error : new Error('Unknown error'), { id })
+      set({ error: userFriendlyError })
       return false
     }
   },

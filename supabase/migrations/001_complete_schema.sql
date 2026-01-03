@@ -341,61 +341,71 @@ CREATE POLICY "Users can delete own entries"
 DROP POLICY IF EXISTS "Users can manage own net worth records" ON public.net_worth_records;
 CREATE POLICY "Users can manage own net worth records"
     ON public.net_worth_records FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Recurring bills policies
 DROP POLICY IF EXISTS "Users can manage own recurring bills" ON public.recurring_bills;
 CREATE POLICY "Users can manage own recurring bills"
     ON public.recurring_bills FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Debt accounts policies
 DROP POLICY IF EXISTS "Users can manage own debt accounts" ON public.debt_accounts;
 CREATE POLICY "Users can manage own debt accounts"
     ON public.debt_accounts FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Accounts policies
 DROP POLICY IF EXISTS "Users can manage own accounts" ON public.accounts;
 CREATE POLICY "Users can manage own accounts"
     ON public.accounts FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- User categories policies (legacy)
 DROP POLICY IF EXISTS "Users can manage own categories" ON public.user_categories;
 CREATE POLICY "Users can manage own categories"
     ON public.user_categories FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Categories policies (new hierarchical)
 DROP POLICY IF EXISTS "Users can manage own categories" ON public.categories;
 CREATE POLICY "Users can manage own categories"
     ON public.categories FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Category budgets policies
 DROP POLICY IF EXISTS "Users can manage own category budgets" ON public.category_budgets;
 CREATE POLICY "Users can manage own category budgets"
     ON public.category_budgets FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Planned payments policies
 DROP POLICY IF EXISTS "Users can manage own planned payments" ON public.planned_payments;
 CREATE POLICY "Users can manage own planned payments"
     ON public.planned_payments FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Transactions policies
 DROP POLICY IF EXISTS "Users can manage own transactions" ON public.transactions;
 CREATE POLICY "Users can manage own transactions"
     ON public.transactions FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Custom dashboard tiles policies
 DROP POLICY IF EXISTS "Users can manage own custom tiles" ON public.custom_dashboard_tiles;
 CREATE POLICY "Users can manage own custom tiles"
     ON public.custom_dashboard_tiles FOR ALL
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- ============================================
 -- INDEXES FOR PERFORMANCE

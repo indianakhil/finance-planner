@@ -9,6 +9,8 @@ import { Input } from '../ui/Input'
 import { useAccountStore } from '../../store/accountStore'
 import { useAuthStore } from '../../store/authStore'
 import { formatCurrency } from '../../lib/utils'
+import { logger } from '../../lib/logger'
+import { useToast } from '../../hooks/useToast'
 import type { Account, AccountType } from '../../types'
 import { ACCOUNT_TYPE_LABELS, isCreditTypeAccount } from '../../types'
 
@@ -64,6 +66,7 @@ export const AccountsManager: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { accounts, isLoading, loadAccounts, addAccount, updateAccount, deleteAccount } = useAccountStore()
+  const { showSuccess, showError } = useToast()
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
@@ -106,33 +109,62 @@ export const AccountsManager: React.FC = () => {
   const handleSave = async () => {
     if (!user || !formData.name.trim()) return
 
-    setIsSaving(true)
-
-    if (editingAccount) {
-      await updateAccount(editingAccount.id, {
-        name: formData.name,
-        account_number: formData.account_number || null,
-        type: formData.type,
-        credit_limit: formData.credit_limit,
-        balance_display: formData.balance_display,
-        payment_due_day: formData.payment_due_day,
-      })
-    } else {
-      await addAccount({
-        user_id: user.id,
-        name: formData.name,
-        account_number: formData.account_number || null,
-        type: formData.type,
-        initial_balance: formData.initial_balance,
-        credit_limit: formData.credit_limit,
-        balance_display: formData.balance_display,
-        payment_due_day: formData.payment_due_day,
-        is_active: true,
-      })
+    // Validate credit card/overdraft specific fields
+    if (isCreditTypeAccount(formData.type)) {
+      if (!formData.balance_display) {
+        showError('Please select a balance display option for credit card/overdraft accounts')
+        return
+      }
     }
 
-    setIsSaving(false)
-    handleCloseModal()
+    setIsSaving(true)
+
+    try {
+      if (editingAccount) {
+        const success = await updateAccount(editingAccount.id, {
+          name: formData.name,
+          account_number: formData.account_number || null,
+          type: formData.type,
+          credit_limit: formData.credit_limit || null,
+          balance_display: formData.balance_display || null,
+          payment_due_day: formData.payment_due_day || null,
+        })
+        if (!success) {
+          // Get the error from store (already user-friendly)
+          const currentError = useAccountStore.getState().error
+          showError(currentError || 'Failed to update account. Please try again.')
+          return
+        }
+        showSuccess('Account updated')
+      } else {
+        const result = await addAccount({
+          user_id: user.id,
+          name: formData.name,
+          account_number: formData.account_number || null,
+          type: formData.type,
+          initial_balance: formData.initial_balance || 0,
+          credit_limit: formData.credit_limit || null,
+          balance_display: formData.balance_display || null,
+          payment_due_day: formData.payment_due_day || null,
+          is_active: true,
+        })
+          if (!result) {
+            // Get the error from store (already user-friendly)
+            const currentError = useAccountStore.getState().error
+            showError(currentError || 'Failed to create account. Please try again.')
+            return
+          }
+        showSuccess('Account created')
+      }
+
+      handleCloseModal()
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred. Please try again.'
+      showError(errorMessage)
+      logger.error('Error saving account', error instanceof Error ? error : new Error('Unknown error'))
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleDelete = async (id: string) => {

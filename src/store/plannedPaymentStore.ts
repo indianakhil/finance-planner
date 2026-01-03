@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { generateId } from '../lib/utils'
+import { logger } from '../lib/logger'
+import { getUserFriendlyError } from '../lib/errorMessages'
 import type { PlannedPayment, Transaction } from '../types'
 
 interface PlannedPaymentState {
@@ -99,9 +101,10 @@ export const usePlannedPaymentStore = create<PlannedPaymentState>((set, get) => 
 
       set({ plannedPayments: data || [], isLoading: false })
     } catch (error) {
-      console.error('Error loading planned payments:', error)
+      const userFriendlyError = getUserFriendlyError(error, 'loadPlannedPayments')
+      logger.error('Error loading planned payments', error instanceof Error ? error : new Error('Unknown error'))
       set({ 
-        error: error instanceof Error ? error.message : 'Failed to load planned payments',
+        error: userFriendlyError,
         isLoading: false 
       })
     }
@@ -138,8 +141,9 @@ export const usePlannedPaymentStore = create<PlannedPaymentState>((set, get) => 
       set((state) => ({ plannedPayments: [...state.plannedPayments, data] }))
       return data
     } catch (error) {
-      console.error('Error adding planned payment:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to add planned payment' })
+      const userFriendlyError = getUserFriendlyError(error, 'addPlannedPayment')
+      logger.error('Error adding planned payment', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return null
     }
   },
@@ -180,8 +184,9 @@ export const usePlannedPaymentStore = create<PlannedPaymentState>((set, get) => 
       }))
       return true
     } catch (error) {
-      console.error('Error updating planned payment:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to update planned payment' })
+      const userFriendlyError = getUserFriendlyError(error, 'updatePlannedPayment')
+      logger.error('Error updating planned payment', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return false
     }
   },
@@ -207,8 +212,9 @@ export const usePlannedPaymentStore = create<PlannedPaymentState>((set, get) => 
       }))
       return true
     } catch (error) {
-      console.error('Error deleting planned payment:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to delete planned payment' })
+      const userFriendlyError = getUserFriendlyError(error, 'deletePlannedPayment')
+      logger.error('Error deleting planned payment', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return false
     }
   },

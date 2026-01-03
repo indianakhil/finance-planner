@@ -47,10 +47,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const { user } = useAuthStore()
   const { addTransaction } = useTransactionStore()
   const { accounts } = useAccountStore()
-  const { getParentCategories, getSubcategories } = useHierarchicalCategoryStore()
+  const { getParentCategories, getSubcategories, loadCategories } = useHierarchicalCategoryStore()
 
   const [isSaving, setIsSaving] = useState(false)
-  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState<FormData>({
     type: initialType,
     name: '',
@@ -65,6 +65,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     payment_method: '',
     status: 'cleared',
   })
+
+  // Load categories when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      loadCategories(user.id)
+    }
+  }, [isOpen, user?.id])
 
   // Reset form when modal opens with new type
   useEffect(() => {
@@ -83,7 +90,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         payment_method: '',
         status: 'cleared',
       })
-      setExpandedCategoryId(null)
+      setExpandedCategories(new Set())
     }
   }, [isOpen, initialType])
 
@@ -136,13 +143,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       for (const parentCat of parentCategories) {
         const subs = getSubcategories(parentCat.id)
         if (subs.some(s => s.id === formData.category_id)) {
-          setExpandedCategoryId(parentCat.id)
+          setExpandedCategories(new Set([parentCat.id]))
           break
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.category_id, parentCategories.length])
+
+  const toggleCategoryExpansion = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(categoryId)) {
+        next.delete(categoryId)
+      } else {
+        next.add(categoryId)
+      }
+      return next
+    })
+  }
   
   // Get selected category display info
   const getSelectedCategoryDisplay = () => {
@@ -268,9 +287,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div className="mb-3 p-2.5 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2">
                 <span className="text-lg">{selectedCategoryDisplay.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-800">{selectedCategoryDisplay.name}</div>
-                  {!selectedCategoryDisplay.isParent && selectedCategoryDisplay.parentName && (
-                    <div className="text-xs text-gray-500">{selectedCategoryDisplay.parentName}</div>
+                  {selectedCategoryDisplay.isParent ? (
+                    <div className="text-sm font-medium text-gray-800">{selectedCategoryDisplay.name}</div>
+                  ) : (
+                    <div className="text-sm font-medium text-gray-800">
+                      {selectedCategoryDisplay.name}
+                      {selectedCategoryDisplay.parentName && (
+                        <span className="text-gray-500 font-normal"> in {selectedCategoryDisplay.parentName}</span>
+                      )}
+                    </div>
                   )}
                 </div>
                 <button
@@ -292,8 +317,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               ) : (
                 parentCategories.map((parent) => {
                   const subcategories = getSubcategories(parent.id)
-                  const isExpanded = expandedCategoryId === parent.id
+                  const isExpanded = expandedCategories.has(parent.id)
                   const isParentSelected = formData.category_id === parent.id
+                  const hasSubcategories = subcategories.length > 0
                   
                   return (
                     <div key={parent.id} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -305,11 +331,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                             : 'bg-white hover:bg-gray-50 active:bg-gray-50'
                         }`}
                         onClick={() => {
-                          if (subcategories.length > 0) {
-                            setExpandedCategoryId(isExpanded ? null : parent.id)
-                          }
-                          // Select parent category if clicking on it
-                          if (!isExpanded || subcategories.length === 0) {
+                          // Toggle expansion for categories with subcategories
+                          if (hasSubcategories) {
+                            toggleCategoryExpansion(parent.id)
+                            // If collapsing and parent is not selected, select it
+                            if (isExpanded && !isParentSelected) {
+                              setFormData({ ...formData, category_id: parent.id })
+                            }
+                          } else {
+                            // No subcategories, select parent directly
                             setFormData({ ...formData, category_id: parent.id })
                           }
                         }}
@@ -320,8 +350,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                         }`}>
                           {parent.name}
                         </span>
-                        {subcategories.length > 0 && (
-                          <div className="flex-shrink-0">
+                        {hasSubcategories && (
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className="text-xs text-gray-400">({subcategories.length})</span>
                             {isExpanded ? (
                               <ChevronUp className="w-4 h-4 text-gray-500" />
                             ) : (
@@ -331,8 +362,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                         )}
                       </div>
                       
-                      {/* Subcategories */}
-                      {isExpanded && subcategories.length > 0 && (
+                      {/* Subcategories - Always render if expanded and has subcategories */}
+                      {isExpanded && hasSubcategories && (
                         <div className="bg-gray-50 border-t border-gray-200">
                           <div className="p-1.5 space-y-1">
                             {subcategories.map((sub) => {
@@ -345,14 +376,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                                       ? 'bg-primary-50 border border-primary-200'
                                       : 'hover:bg-white active:bg-white'
                                   }`}
-                                  onClick={() => setFormData({ ...formData, category_id: sub.id })}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setFormData({ ...formData, category_id: sub.id })
+                                  }}
                                 >
                                   <span className="text-base flex-shrink-0">{sub.icon}</span>
-                                  <span className={`flex-1 text-sm truncate ${
-                                    isSubSelected ? 'text-primary-700 font-medium' : 'text-gray-700'
-                                  }`}>
-                                    {sub.name}
-                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <span className={`text-sm block truncate ${
+                                      isSubSelected ? 'text-primary-700 font-medium' : 'text-gray-700'
+                                    }`}>
+                                      {sub.name}
+                                      <span className="text-gray-500 font-normal"> in {parent.name}</span>
+                                    </span>
+                                  </div>
                                   {isSubSelected && (
                                     <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0"></div>
                                   )}

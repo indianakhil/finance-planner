@@ -131,19 +131,34 @@ export const PlannedPaymentsManager: React.FC = () => {
 
     if (editingPayment) {
       const success = await updatePlannedPayment(editingPayment.id, paymentData)
-      if (success) showSuccess('Payment updated')
+      if (success) {
+        showSuccess('Payment updated')
+        handleCloseModal()
+      } else {
+        const currentError = usePlannedPaymentStore.getState().error
+        showError(currentError || 'Failed to update payment. Please try again.')
+      }
     } else {
       const result = await addPlannedPayment(paymentData)
-      if (result) showSuccess('Payment scheduled')
+      if (result) {
+        showSuccess('Payment scheduled')
+        handleCloseModal()
+      } else {
+        const currentError = usePlannedPaymentStore.getState().error
+        showError(currentError || 'Failed to schedule payment. Please try again.')
+      }
     }
-    handleCloseModal()
   }
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this planned payment?')) {
       const success = await deletePlannedPayment(id)
-      if (success) showSuccess('Payment deleted')
-      else showError('Failed to delete payment')
+      if (success) {
+        showSuccess('Payment deleted')
+      } else {
+        const currentError = usePlannedPaymentStore.getState().error
+        showError(currentError || 'Failed to delete payment. Please try again.')
+      }
     }
   }
 

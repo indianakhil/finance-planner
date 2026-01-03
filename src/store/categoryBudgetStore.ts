@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { generateId } from '../lib/utils'
+import { logger } from '../lib/logger'
+import { getUserFriendlyError } from '../lib/errorMessages'
 import type { CategoryBudget, Category, CategoryBudgetSummary, MonthlyBudgetOverview, Transaction } from '../types'
 
 interface CategoryBudgetState {
@@ -66,9 +68,10 @@ export const useCategoryBudgetStore = create<CategoryBudgetState>((set, get) => 
 
       set({ budgets: data || [], isLoading: false })
     } catch (error) {
-      console.error('Error loading budgets:', error)
+      const userFriendlyError = getUserFriendlyError(error, 'loadCategoryBudgets')
+      logger.error('Error loading budgets', error instanceof Error ? error : new Error('Unknown error'))
       set({ 
-        error: error instanceof Error ? error.message : 'Failed to load budgets',
+        error: userFriendlyError,
         isLoading: false 
       })
     }
@@ -141,8 +144,9 @@ export const useCategoryBudgetStore = create<CategoryBudgetState>((set, get) => 
         return data
       }
     } catch (error) {
-      console.error('Error setting budget:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to set budget' })
+      const userFriendlyError = getUserFriendlyError(error, 'setCategoryBudget')
+      logger.error('Error setting budget', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return null
     }
   },
@@ -168,8 +172,9 @@ export const useCategoryBudgetStore = create<CategoryBudgetState>((set, get) => 
       }))
       return true
     } catch (error) {
-      console.error('Error deleting budget:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to delete budget' })
+      const userFriendlyError = getUserFriendlyError(error, 'deleteCategoryBudget')
+      logger.error('Error deleting budget', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return false
     }
   },

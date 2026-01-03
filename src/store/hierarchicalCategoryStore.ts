@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { generateId } from '../lib/utils'
+import { logger } from '../lib/logger'
+import { getUserFriendlyError } from '../lib/errorMessages'
 import type { Category } from '../types'
 
 // Default categories for demo mode with hierarchy
@@ -175,9 +177,10 @@ export const useHierarchicalCategoryStore = create<HierarchicalCategoryState>((s
 
       set({ categories: data || [], isLoading: false })
     } catch (error) {
-      console.error('Error loading categories:', error)
+      const userFriendlyError = getUserFriendlyError(error, 'loadCategories')
+      logger.error('Error loading categories', error instanceof Error ? error : new Error('Unknown error'))
       set({ 
-        error: error instanceof Error ? error.message : 'Failed to load categories',
+        error: userFriendlyError,
         isLoading: false 
       })
     }
@@ -207,8 +210,9 @@ export const useHierarchicalCategoryStore = create<HierarchicalCategoryState>((s
       set((state) => ({ categories: [...state.categories, data] }))
       return data
     } catch (error) {
-      console.error('Error adding category:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to add category' })
+      const userFriendlyError = getUserFriendlyError(error, 'addCategory')
+      logger.error('Error adding category', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return null
     }
   },
@@ -239,8 +243,9 @@ export const useHierarchicalCategoryStore = create<HierarchicalCategoryState>((s
       }))
       return true
     } catch (error) {
-      console.error('Error updating category:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to update category' })
+      const userFriendlyError = getUserFriendlyError(error, 'updateCategory')
+      logger.error('Error updating category', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return false
     }
   },
@@ -274,8 +279,9 @@ export const useHierarchicalCategoryStore = create<HierarchicalCategoryState>((s
       }))
       return true
     } catch (error) {
-      console.error('Error deleting category:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to delete category' })
+      const userFriendlyError = getUserFriendlyError(error, 'deleteCategory')
+      logger.error('Error deleting category', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return false
     }
   },

@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { logger } from '../lib/logger'
+import { getUserFriendlyError } from '../lib/errorMessages'
 import type { User, UserSettings } from '../types'
 
 interface AuthState {
@@ -167,8 +169,9 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false })
           return false
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Sign up failed'
-          set({ error: message, isLoading: false })
+          const userFriendlyError = getUserFriendlyError(error, 'signUp')
+          logger.error('Sign up error', error instanceof Error ? error : new Error('Unknown error'))
+          set({ error: userFriendlyError, isLoading: false })
           return false
         }
       },
@@ -203,8 +206,9 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false })
           return false
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Sign in failed'
-          set({ error: message, isLoading: false })
+          const userFriendlyError = getUserFriendlyError(error, 'signIn')
+          logger.error('Sign in error', error instanceof Error ? error : new Error('Unknown error'))
+          set({ error: userFriendlyError, isLoading: false })
           return false
         }
       },
@@ -228,8 +232,9 @@ export const useAuthStore = create<AuthState>()(
           if (error) throw error
           return true
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Google sign in failed'
-          set({ error: message, isLoading: false })
+          const userFriendlyError = getUserFriendlyError(error, 'signInWithGoogle')
+          logger.error('Google sign in error', error instanceof Error ? error : new Error('Unknown error'))
+          set({ error: userFriendlyError, isLoading: false })
           return false
         }
       },

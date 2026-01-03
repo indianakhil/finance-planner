@@ -9,6 +9,7 @@ import { Input } from '../ui/Input'
 import { useHierarchicalCategoryStore } from '../../store/hierarchicalCategoryStore'
 import { useAuthStore } from '../../store/authStore'
 import { useToast } from '../../hooks/useToast'
+import { logger } from '../../lib/logger'
 import type { Category } from '../../types'
 
 interface FormData {
@@ -97,25 +98,40 @@ export const CategoryManager: React.FC = () => {
   const handleSave = async () => {
     if (!user || !formData.name.trim()) return
 
-    const categoryData = {
-      user_id: user.id,
-      name: formData.name.trim(),
-      icon: formData.icon.trim() || '📁',
-      color: formData.color,
-      parent_id: formData.parent_id || null,
-      sort_order: editingCategory?.sort_order || categories.length,
-    }
+    try {
+      const categoryData = {
+        user_id: user.id,
+        name: formData.name.trim(),
+        icon: formData.icon.trim() || '📁',
+        color: formData.color,
+        parent_id: formData.parent_id || null,
+        sort_order: editingCategory?.sort_order || categories.length,
+      }
 
-    if (editingCategory) {
-      const success = await updateCategory(editingCategory.id, categoryData)
-      if (success) showSuccess('Category updated')
-      else showError('Failed to update category')
-    } else {
-      const result = await addCategory(categoryData)
-      if (result) showSuccess('Category created')
-      else showError('Failed to create category')
+      if (editingCategory) {
+        const success = await updateCategory(editingCategory.id, categoryData)
+        if (success) {
+          showSuccess('Category updated')
+          handleCloseModal()
+        } else {
+          const currentError = useHierarchicalCategoryStore.getState().error
+          showError(currentError || 'Failed to update category. Please try again.')
+        }
+      } else {
+        const result = await addCategory(categoryData)
+        if (result) {
+          showSuccess('Category created')
+          handleCloseModal()
+        } else {
+          const currentError = useHierarchicalCategoryStore.getState().error
+          showError(currentError || 'Failed to create category. Please try again.')
+        }
+      }
+    } catch (error) {
+      const currentError = useHierarchicalCategoryStore.getState().error
+      showError(currentError || 'An error occurred. Please try again.')
+      logger.error('Error saving category', error instanceof Error ? error : new Error('Unknown error'))
     }
-    handleCloseModal()
   }
 
   const handleDelete = async (id: string) => {
@@ -127,8 +143,12 @@ export const CategoryManager: React.FC = () => {
 
     if (confirm('Are you sure you want to delete this category?')) {
       const success = await deleteCategory(id)
-      if (success) showSuccess('Category deleted')
-      else showError('Failed to delete category')
+      if (success) {
+        showSuccess('Category deleted')
+      } else {
+        const currentError = useHierarchicalCategoryStore.getState().error
+        showError(currentError || 'Failed to delete category. Please try again.')
+      }
     }
   }
 

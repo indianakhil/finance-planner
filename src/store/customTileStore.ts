@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { generateId } from '../lib/utils'
+import { logger } from '../lib/logger'
+import { getUserFriendlyError } from '../lib/errorMessages'
 import type { CustomDashboardTile } from '../types'
 
 interface CustomTileState {
@@ -51,9 +53,10 @@ export const useCustomTileStore = create<CustomTileState>((set, get) => ({
 
       set({ tiles: data || [], isLoading: false })
     } catch (error) {
-      console.error('Error loading custom tiles:', error)
+      const userFriendlyError = getUserFriendlyError(error, 'loadCustomTiles')
+      logger.error('Error loading custom tiles', error instanceof Error ? error : new Error('Unknown error'))
       set({ 
-        error: error instanceof Error ? error.message : 'Failed to load custom tiles',
+        error: userFriendlyError,
         isLoading: false 
       })
     }
@@ -83,8 +86,9 @@ export const useCustomTileStore = create<CustomTileState>((set, get) => ({
       set((state) => ({ tiles: [...state.tiles, data] }))
       return data
     } catch (error) {
-      console.error('Error adding custom tile:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to add custom tile' })
+      const userFriendlyError = getUserFriendlyError(error, 'addCustomTile')
+      logger.error('Error adding custom tile', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return null
     }
   },
@@ -114,8 +118,9 @@ export const useCustomTileStore = create<CustomTileState>((set, get) => ({
       }))
       return true
     } catch (error) {
-      console.error('Error updating custom tile:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to update custom tile' })
+      const userFriendlyError = getUserFriendlyError(error, 'updateCustomTile')
+      logger.error('Error updating custom tile', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return false
     }
   },
@@ -141,8 +146,9 @@ export const useCustomTileStore = create<CustomTileState>((set, get) => ({
       }))
       return true
     } catch (error) {
-      console.error('Error deleting custom tile:', error)
-      set({ error: error instanceof Error ? error.message : 'Failed to delete custom tile' })
+      const userFriendlyError = getUserFriendlyError(error, 'deleteCustomTile')
+      logger.error('Error deleting custom tile', error instanceof Error ? error : new Error('Unknown error'))
+      set({ error: userFriendlyError })
       return false
     }
   },

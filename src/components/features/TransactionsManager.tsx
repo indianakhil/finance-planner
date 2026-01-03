@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { TransactionType as TxType } from '../../types'
-import { ArrowLeft, Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Loader2, Filter, Calendar, Search, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Loader2, Filter, Calendar, Search, MoreVertical, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Layout } from '../layout/Layout'
 import { Card, CardContent } from '../ui/Card'
 import { Button } from '../ui/Button'
@@ -12,6 +12,8 @@ import { useAccountStore } from '../../store/accountStore'
 import { useHierarchicalCategoryStore } from '../../store/hierarchicalCategoryStore'
 import { useAuthStore } from '../../store/authStore'
 import { formatFullCurrency } from '../../lib/utils'
+import { logger } from '../../lib/logger'
+import { useToast } from '../../hooks/useToast'
 import type { Transaction, TransactionType, TransactionStatus, Account } from '../../types'
 import { isCreditTypeAccount } from '../../types'
 
@@ -84,12 +86,14 @@ export const TransactionsManager: React.FC = () => {
   const { user } = useAuthStore()
   const { transactions, isLoading, loadTransactions, addTransaction, updateTransaction, deleteTransaction } = useTransactionStore()
   const { accounts, loadAccounts } = useAccountStore()
-  const { categories, loadCategories, getParentCategories } = useHierarchicalCategoryStore()
+  const { categories, loadCategories, getParentCategories, getSubcategories } = useHierarchicalCategoryStore()
+  const { showSuccess, showError } = useToast()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [formData, setFormData] = useState<TransactionFormData>(initialFormData)
   const [isSaving, setIsSaving] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -155,6 +159,7 @@ export const TransactionsManager: React.FC = () => {
     }
     setIsModalOpen(true)
     setActiveMenu(null)
+    setExpandedCategories(new Set())
   }
 
   const handleCloseModal = () => {
@@ -197,35 +202,53 @@ export const TransactionsManager: React.FC = () => {
 
     setIsSaving(true)
 
-    const transactionData = {
-      user_id: user.id,
-      type: formData.type,
-      name: formData.name || null,
-      source_account_id: formData.source_account_id || null,
-      destination_account_id: formData.destination_account_id || null,
-      category_id: null, // Legacy field - always null, use new_category_id instead
-      new_category_id: formData.category_id || null, // References new categories table
-      amount: formData.amount,
-      transaction_date: formData.transaction_date,
-      transaction_time: formData.transaction_time || null,
-      note: formData.note || null,
-      payee: formData.payee || null,
-      payment_type: formData.payment_type || null,
-      payment_method: null,
-      warranty_until: formData.warranty_until || null,
-      status: formData.status,
-      place: formData.place || null,
-      planned_payment_id: null,
-    }
+    try {
+      const transactionData = {
+        user_id: user.id,
+        type: formData.type,
+        name: formData.name || null,
+        source_account_id: formData.source_account_id || null,
+        destination_account_id: formData.destination_account_id || null,
+        category_id: null, // Legacy field - always null, use new_category_id instead
+        new_category_id: formData.category_id || null, // References new categories table
+        amount: formData.amount,
+        transaction_date: formData.transaction_date,
+        transaction_time: formData.transaction_time || null,
+        note: formData.note || null,
+        payee: formData.payee || null,
+        payment_type: formData.payment_type || null,
+        payment_method: null,
+        warranty_until: formData.warranty_until || null,
+        status: formData.status,
+        place: formData.place || null,
+        planned_payment_id: null,
+      }
 
-    if (editingTransaction) {
-      await updateTransaction(editingTransaction.id, transactionData)
-    } else {
-      await addTransaction(transactionData)
-    }
+      if (editingTransaction) {
+        const success = await updateTransaction(editingTransaction.id, transactionData)
+        if (!success) {
+          const currentError = useTransactionStore.getState().error
+          showError(currentError || 'Failed to update transaction. Please try again.')
+          return
+        }
+        showSuccess('Transaction updated')
+      } else {
+        const result = await addTransaction(transactionData)
+        if (!result) {
+          const currentError = useTransactionStore.getState().error
+          showError(currentError || 'Failed to create transaction. Please try again.')
+          return
+        }
+        showSuccess('Transaction created')
+      }
 
-    setIsSaving(false)
-    handleCloseModal()
+      handleCloseModal()
+    } catch (error) {
+      showError('An error occurred. Please try again.')
+      logger.error('Error saving transaction', error instanceof Error ? error : new Error('Unknown error'))
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -235,12 +258,38 @@ export const TransactionsManager: React.FC = () => {
     setActiveMenu(null)
   }
 
-  // Get relevant categories based on transaction type
-  const getRelevantCategories = () => {
-    if (formData.type === 'transfer') return []
-    // Return all parent categories - the new system doesn't distinguish by type
-    return getParentCategories()
+  // Get parent categories for hierarchical selection
+  const parentCategories = getParentCategories()
+
+  // Toggle category expansion
+  const toggleCategoryExpansion = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(categoryId)) {
+        next.delete(categoryId)
+      } else {
+        next.add(categoryId)
+      }
+      return next
+    })
   }
+
+  // Get selected category display info
+  const getSelectedCategoryDisplay = () => {
+    if (!formData.category_id) return null
+    // Check if it's a parent category
+    const parent = parentCategories.find(c => c.id === formData.category_id)
+    if (parent) return { name: parent.name, icon: parent.icon, isParent: true }
+    // Check if it's a subcategory
+    for (const parentCat of parentCategories) {
+      const subs = getSubcategories(parentCat.id)
+      const sub = subs.find(s => s.id === formData.category_id)
+      if (sub) return { name: sub.name, icon: sub.icon, isParent: false, parentName: parentCat.name }
+    }
+    return null
+  }
+
+  const selectedCategoryDisplay = getSelectedCategoryDisplay()
 
   // Filter transactions
   const filteredTransactions = transactions.filter((txn) => {
@@ -649,20 +698,130 @@ export const TransactionsManager: React.FC = () => {
               </div>
             )}
 
-            {/* Category (not for transfers) */}
+            {/* Category (not for transfers) - Hierarchical Selection */}
             {formData.type !== 'transfer' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={formData.category_id || ''}
-                  onChange={(e) => setFormData({ ...formData, category_id: e.target.value || null })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Select category</option>
-                  {getRelevantCategories().map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                
+                {/* Selected Category Display */}
+                {selectedCategoryDisplay && (
+                  <div className="mb-3 p-2.5 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2">
+                    <span className="text-lg">{selectedCategoryDisplay.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      {selectedCategoryDisplay.isParent ? (
+                        <div className="text-sm font-medium text-gray-800">{selectedCategoryDisplay.name}</div>
+                      ) : (
+                        <div className="text-sm font-medium text-gray-800">
+                          {selectedCategoryDisplay.name}
+                          {selectedCategoryDisplay.parentName && (
+                            <span className="text-gray-500 font-normal"> in {selectedCategoryDisplay.parentName}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, category_id: null })}
+                      className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded active:bg-gray-200 touch-manipulation"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+                
+                {/* Category Selection List */}
+                <div className="space-y-1.5 max-h-[180px] md:max-h-[200px] overflow-y-auto border border-gray-200 rounded-lg p-2 scrollbar-hide">
+                  {parentCategories.length === 0 ? (
+                    <div className="text-center py-4 text-gray-400 text-sm">
+                      No categories available. Create categories in Settings first.
+                    </div>
+                  ) : (
+                    parentCategories.map((parent) => {
+                      const subcategories = getSubcategories(parent.id)
+                      const isExpanded = expandedCategories.has(parent.id)
+                      const isParentSelected = formData.category_id === parent.id
+                      const hasSubcategories = subcategories.length > 0
+                      
+                      return (
+                        <div key={parent.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                          {/* Parent Category */}
+                          <div
+                            className={`flex items-center gap-2.5 p-2.5 cursor-pointer transition-colors touch-manipulation min-h-[44px] ${
+                              isParentSelected
+                                ? 'bg-primary-50 border-primary-200'
+                                : 'bg-white hover:bg-gray-50 active:bg-gray-50'
+                            }`}
+                            onClick={() => {
+                              if (hasSubcategories) {
+                                toggleCategoryExpansion(parent.id)
+                                if (isExpanded && !isParentSelected) {
+                                  setFormData({ ...formData, category_id: parent.id })
+                                }
+                              } else {
+                                setFormData({ ...formData, category_id: parent.id })
+                              }
+                            }}
+                          >
+                            <span className="text-lg flex-shrink-0">{parent.icon}</span>
+                            <span className={`flex-1 text-sm font-medium truncate ${
+                              isParentSelected ? 'text-primary-700' : 'text-gray-800'
+                            }`}>
+                              {parent.name}
+                            </span>
+                            {hasSubcategories && (
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <span className="text-xs text-gray-400">({subcategories.length})</span>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Subcategories */}
+                          {isExpanded && hasSubcategories && (
+                            <div className="bg-gray-50 border-t border-gray-200">
+                              <div className="p-1.5 space-y-1">
+                                {subcategories.map((sub) => {
+                                  const isSubSelected = formData.category_id === sub.id
+                                  return (
+                                    <div
+                                      key={sub.id}
+                                      className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-colors touch-manipulation min-h-[40px] ${
+                                        isSubSelected
+                                          ? 'bg-primary-50 border border-primary-200'
+                                          : 'hover:bg-white active:bg-white'
+                                      }`}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setFormData({ ...formData, category_id: sub.id })
+                                      }}
+                                    >
+                                      <span className="text-base flex-shrink-0">{sub.icon}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <span className={`text-sm block truncate ${
+                                          isSubSelected ? 'text-primary-700 font-medium' : 'text-gray-700'
+                                        }`}>
+                                          {sub.name}
+                                          <span className="text-gray-500 font-normal"> in {parent.name}</span>
+                                        </span>
+                                      </div>
+                                      {isSubSelected && (
+                                        <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0"></div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
               </div>
             )}
 
